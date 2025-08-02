@@ -3,6 +3,11 @@
 import time
 import argparse
 import feedparser
+import requests
+import pathlib
+import os
+import shutil
+import json
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -33,6 +38,38 @@ parser.add_argument('-b',
                     type=date_type,
                     required=True,
                     help='select content published before this date')
+
+
+def download_file(url, local_filename=None):
+    """
+    Downloads a file from a URL and saves it to the current directory.
+
+    Args:
+        url (str): The URL of the file to download.
+        local_filename (str, optional): The name to save the file as.
+                                         If None, the function will try to
+                                         determine the filename from the URL.
+                                         Defaults to None.
+    """
+    if local_filename is None:
+        local_filename = url.split('/')[-1]
+
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+
+
+    try:
+        with requests.get(url, headers=headers, stream=True) as r:
+            r.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+            with open(local_filename, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        print(f"File downloaded successfully as '{local_filename}'")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+    except IOError as e:
+        print(f"An error occurred while writing the file: {e}")
 
 def main(args):
     with open('podcasts', 'r', encoding='utf-8') as p:
@@ -66,20 +103,60 @@ def main(args):
             feeds.append(feed)
 
 
-    print('Before', args.before)
-    print('After', args.after)
+    filename = f'{args.after.date()}_{args.before.date()}'
+    data = {
+        'count': 0,
+        'timestamp': datetime.now().isoformat(),
+        'podcasts': []
+    }
 
+    print(f'Searching between {args.before} and {args.after}...')
     for feed in feeds:
-        print(f'Search {feed.feed.get("title", "N/A")}')
+        found=0
+        print(f'Searching {feed.feed.get("title", "N/A")}...')
         for entry in feed.entries:
             if not hasattr(entry, "published_parsed"):
                 continue
             publication_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
 
             if args.after <= publication_date <= args.before:
-                print(f'{entry.title} published {publication_date} at {entry.get("link", "N/A")}')
+                data
+                found += 1
+                print(f'[Title] {entry.title}\n[Published On] {publication_date}\n[More Info] {entry.get("link", "N/A")}')
                 for i, enclosure in enumerate(entry.get("enclosures", [])):
-                    print(f'\t{i}: {enclosure.href}')
+                    print(f'\t[DOWNLOAD] {enclosure.href}')
+                download_link = entry.get('enclosures', [])[0] if entry.get('enclosures', []) else None
+                data['podcasts'].append({
+                    'title': entry.title,
+                    'timestamp': publication_date.isoformat(),
+                    'more_info': entry.get('link', None),
+                    'download': download_link
+                })
+                data['count'] += 1
+
+
+        if not found:
+            print('\t<nothing found>')
+
+
+    exec_wd = pathlib.Path.cwd()
+    new_dir_path = pathlib.Path(filename)
+
+    try:
+        # if exists, wipe
+        if new_dir_path.exists():
+            shutil.rmtree(new_dir_path)
+        new_dir_path.mkdir(exist_ok=False)
+
+        os.chdir(new_dir_path)
+        for i in range(data['count']):
+            download_file(data['podcasts'][i]['download']['href'], local_filename=f'{i}.mp3')
+        with open('info.json', 'w') as f:
+            print(json.dumps(data), file=f)
+
+    finally:
+        os.chdir(exec_wd)
+
 
 if __name__ == '__main__':
     main(parser.parse_args())

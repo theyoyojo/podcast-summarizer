@@ -1,5 +1,7 @@
 #import requests
 
+# competitor: https://www.listen411.com/?s=ep
+
 ##url = "https://feeds.simplecast.com/abc123"  # Example
 #url = 'https://feeds.soundcloud.com/users/soundcloud:users:618306402/sounds.rss'
 #response = requests.get(url)
@@ -50,5 +52,5 @@ model = whisper.load_model('base')
 
 result = model.transcribe('podcast.wav')
 
-with open("output.txt", 'w') as f:
+with open("output2.txt", 'w') as f:
     print(result['text'], file=f)
