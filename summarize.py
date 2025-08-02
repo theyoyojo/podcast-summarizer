@@ -23,7 +23,7 @@ def summarize(subdirectory_name):
     
     #warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
-    pbar = tqdm.tqdm(total=directory['count'], desc="Text Summarization")
+    pbar = tqdm.tqdm(total=directory['count'], desc="Summarizing Text")
     pbar.update(0)
     for i in range(directory['count']):
         result = do_summarize(f'{subdirectory_name}/{i}.txt')

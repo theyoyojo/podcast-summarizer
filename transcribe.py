@@ -11,7 +11,7 @@ def transcribe(subdirectory_name):
 
     warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
-    pbar = tqdm.tqdm(total=directory['count'], desc="Podcast transcription")
+    pbar = tqdm.tqdm(total=directory['count'], desc="Transcribing Podcasts")
     pbar.update(0)
     for i in range(directory['count']):
         result = model.transcribe(f'{subdirectory_name}/{i}.mp3')

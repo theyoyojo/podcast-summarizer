@@ -109,10 +109,10 @@ def gather(after, before):
         'podcasts': []
     }
 
-    print(f'Searching between {after} and {before}...')
+    #print(f'Searching between {after} and {before}...')
     for feed in feeds:
         found=0
-        print(f'Searching {feed.feed.get("title", "N/A")}...')
+        #print(f'Searching {feed.feed.get("title", "N/A")}...')
         for entry in feed.entries:
             if not hasattr(entry, "published_parsed"):
                 continue
@@ -120,9 +120,10 @@ def gather(after, before):
 
             if after <= publication_date <= before:
                 found += 1
-                print(f'[Title] {entry.title}\n[Published On] {publication_date}\n[More Info] {entry.get("link", "N/A")}')
+                #print(f'[Title] {entry.title}\n[Published On] {publication_date}\n[More Info] {entry.get("link", "N/A")}')
                 for i, enclosure in enumerate(entry.get("enclosures", [])):
-                    print(f'\t[DOWNLOAD] {enclosure.href}')
+                    pass
+                    #print(f'\t[DOWNLOAD] {enclosure.href}')
                 download_link = entry.get('enclosures', [])[0] if entry.get('enclosures', []) else None
                 data['podcasts'].append({
                     'title': entry.title,
@@ -134,7 +135,8 @@ def gather(after, before):
 
 
         if not found:
-            print('\t<nothing found>')
+            #print('\t<nothing found>')
+            pass
 
 
     exec_wd = pathlib.Path.cwd()
@@ -146,7 +148,7 @@ def gather(after, before):
             shutil.rmtree(new_dir_path)
         new_dir_path.mkdir(exist_ok=False)
 
-        pbar = tqdm.tqdm(total=directory['count'], desc="Text Summarization")
+        pbar = tqdm.tqdm(total=data['count'], desc="Downloading Podcasts")
         pbar.update(0)
         os.chdir(new_dir_path)
         for i in range(data['count']):
