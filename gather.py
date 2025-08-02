@@ -1,15 +1,18 @@
 #!/bin/env python
 
-import time
 import argparse
 import feedparser
-import requests
+import json
 import pathlib
 import os
+import requests
 import shutil
-import json
-from datetime import datetime
+import time
+import tqdm
+
 from dataclasses import dataclass
+from datetime import datetime
+from utility import date_type
 
 @dataclass
 class Podcast:
@@ -19,12 +22,6 @@ class Podcast:
     website: str
 
 parser = argparse.ArgumentParser(prog='create_summary')
-
-def date_type(datestr):
-    try:
-        return datetime.strptime(datestr, "%Y-%m-%d")
-    except ValueError:
-        raise argparse.ArgumentTypeError(f'Bad date argument: {datestr} (Excepted YYYY-MM-DD)')
 
 
 parser.add_argument('-a',
@@ -65,13 +62,15 @@ def download_file(url, local_filename=None):
             with open(local_filename, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-        print(f"File downloaded successfully as '{local_filename}'")
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
     except IOError as e:
         print(f"An error occurred while writing the file: {e}")
 
 def main(args):
+    gather(args.after, args.before)
+
+def gather(after, before):
     with open('podcasts', 'r', encoding='utf-8') as p:
         entries = p.read().split("---")
 
@@ -103,14 +102,14 @@ def main(args):
             feeds.append(feed)
 
 
-    filename = f'{args.after.date()}_{args.before.date()}'
+    filename = f'{after.date()}_{before.date()}'
     data = {
         'count': 0,
         'timestamp': datetime.now().isoformat(),
         'podcasts': []
     }
 
-    print(f'Searching between {args.before} and {args.after}...')
+    print(f'Searching between {after} and {before}...')
     for feed in feeds:
         found=0
         print(f'Searching {feed.feed.get("title", "N/A")}...')
@@ -119,8 +118,7 @@ def main(args):
                 continue
             publication_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
 
-            if args.after <= publication_date <= args.before:
-                data
+            if after <= publication_date <= before:
                 found += 1
                 print(f'[Title] {entry.title}\n[Published On] {publication_date}\n[More Info] {entry.get("link", "N/A")}')
                 for i, enclosure in enumerate(entry.get("enclosures", [])):
@@ -148,10 +146,13 @@ def main(args):
             shutil.rmtree(new_dir_path)
         new_dir_path.mkdir(exist_ok=False)
 
+        pbar = tqdm.tqdm(total=directory['count'], desc="Text Summarization")
+        pbar.update(0)
         os.chdir(new_dir_path)
         for i in range(data['count']):
             download_file(data['podcasts'][i]['download']['href'], local_filename=f'{i}.mp3')
-        with open('info.json', 'w') as f:
+            pbar.update(1)
+        with open('directory.json', 'w') as f:
             print(json.dumps(data), file=f)
 
     finally:
