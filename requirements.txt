@@ -40,8 +40,6 @@ dockerpty==0.4.1
 docopt==0.6.2
 docutils==0.20.1
 fb-re2==1.0.7
-fedora-third-party==0.10
-fedpkg==1.45
 feedparser==6.0.11
 file-magic==0.4.0
 filelock==3.17.0
