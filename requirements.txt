@@ -75,7 +75,6 @@ kitchen==1.2.6
 kobo==0.36.2
 langtable==0.0.67
 Levenshtein==0.23.0
-libcomps==0.1.20
 libdnf==0.73.2
 libvirt-python==10.1.0
 llvmlite==0.44.0
