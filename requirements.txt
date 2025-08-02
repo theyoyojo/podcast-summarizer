@@ -14,7 +14,6 @@ blivet==3.10.0
 bodhi-client==8.1.0
 boto3==1.34.138
 botocore==1.34.138
-Brlapi==0.8.5
 cached-property==1.5.2
 cachetools==5.5.2
 CCColUtils==1.5
