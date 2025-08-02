@@ -1,3 +1,13 @@
+#!/bin/env python
+
+parser = argparse.ArgumentParser(prog='summarize')
+
+parser.add_argument('-d',
+                    '--directory',
+                    type=str,
+                    required=True,
+                    help='select directory with text files and directory')
+
 from transformers import pipeline
 
 summarizer = pipeline('summarization', model='facebook/bart-large-cnn')
