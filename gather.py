@@ -92,7 +92,6 @@ def gather(after, before, feeds):
             feed_data.append(feed)
         pbar.update(1)
 
-
     cache = load_cache(f'.cache-{feeds}')
 
     need_download = []
