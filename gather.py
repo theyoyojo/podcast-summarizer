@@ -12,7 +12,7 @@ import tqdm
 
 from dataclasses import dataclass
 from datetime import datetime
-from utility import date_type
+from utility import date_type, load_cache, cache_add_range
 
 @dataclass
 class Podcast:
@@ -35,6 +35,12 @@ parser.add_argument('-b',
                     type=date_type,
                     required=True,
                     help='select content published before this date')
+
+parser.add_argument('-f',
+                    '--feeds',
+                    type=str,
+                    required=True,
+                    help='select json tile with rss feed list')
 
 
 def download_file(url, local_filename=None):
@@ -67,52 +73,30 @@ def download_file(url, local_filename=None):
     except IOError as e:
         print(f"An error occurred while writing the file: {e}")
 
-def main(args):
-    gather(args.after, args.before)
-
-def gather(after, before):
+def gather(after, before, feeds):
+    podcasts = {}
+    with open(feeds, 'r', encoding='utf-8') as f:
+        podcasts = json.loads(f.read())
+        
     with open('podcasts', 'r', encoding='utf-8') as p:
         entries = p.read().split("---")
 
-    podcasts = []
-
-    for e in entries:
-        v = {'title':'', 'description':'','rss':'','website':''}
-        lines = [l.strip() for l in e.strip().splitlines()]
-        for l in lines:
-            match l.split(':', 1):
-                case ['Title', title]:
-                    v['title'] = title.strip()
-                case ['Description', description]:
-                    v['description'] = description.strip()
-                case ['RSS Feed', rss]:
-                    v['rss'] = rss.strip()
-                case ['Website', website]:
-                    v['website'] = website.strip()
-                case _:
-                    raise Exception('Unexpected field')
-        podcasts.append(Podcast(title=v['title'], description=v['description'], rss=v['rss'], website=v['website']))
-
-    feeds = []
+    feed_data = []
+    pbar = tqdm.tqdm(total=len(podcasts), desc='Updating Feeds')
+    pbar.update(0)
     for p in podcasts:
-        feed = feedparser.parse(p.rss)
+        feed = feedparser.parse(p['rss'])
         if feed.bozo:
-            print(f'FAIL: cannot parse {p.rss}: {feed.bozo_exception}')
+            print(f'FAIL: cannot parse {p['rss']}: {feed.bozo_exception}')
         else:
-            feeds.append(feed)
+            feed_data.append(feed)
+        pbar.update(1)
 
 
-    filename = f'{after.date()}_{before.date()}'
-    data = {
-        'count': 0,
-        'timestamp': datetime.now().isoformat(),
-        'podcasts': []
-    }
+    cache = load_cache(f'.cache-{feeds}')
 
-    #print(f'Searching between {after} and {before}...')
-    for feed in feeds:
+    for feed in feed_data:
         found=0
-        #print(f'Searching {feed.feed.get("title", "N/A")}...')
         for entry in feed.entries:
             if not hasattr(entry, "published_parsed"):
                 continue
@@ -120,46 +104,39 @@ def gather(after, before):
 
             if after <= publication_date <= before:
                 found += 1
-                #print(f'[Title] {entry.title}\n[Published On] {publication_date}\n[More Info] {entry.get("link", "N/A")}')
-                for i, enclosure in enumerate(entry.get("enclosures", [])):
-                    pass
-                    #print(f'\t[DOWNLOAD] {enclosure.href}')
                 download_link = entry.get('enclosures', [])[0] if entry.get('enclosures', []) else None
-                data['podcasts'].append({
+                cache['podcasts'].append({
                     'title': entry.title,
                     'timestamp': publication_date.isoformat(),
                     'more_info': entry.get('link', None),
                     'download': download_link
                 })
-                data['count'] += 1
-
-
+                cache['count'] += 1
+                #print(f'[{cache["count"]}]', cache, '\n-------\n\n')
         if not found:
-            #print('\t<nothing found>')
             pass
-
-
     exec_wd = pathlib.Path.cwd()
-    new_dir_path = pathlib.Path(filename)
-
     try:
-        # if exists, wipe
-        if new_dir_path.exists():
-            shutil.rmtree(new_dir_path)
-        new_dir_path.mkdir(exist_ok=False)
-
-        pbar = tqdm.tqdm(total=data['count'], desc="Downloading Podcasts")
+        pbar = tqdm.tqdm(total=cache['count'],
+                         desc="Downloading Podcasts")
         pbar.update(0)
-        os.chdir(new_dir_path)
-        for i in range(data['count']):
-            download_file(data['podcasts'][i]['download']['href'], local_filename=f'{i}.mp3')
+        os.chdir(cache['dir'])
+        for i in range(cache['count']):
+            #download_file(cache['podcasts'][i]['download']['href'],
+            #              local_filename=f'{i}.mp3')
             pbar.update(1)
-        with open('directory.json', 'w') as f:
-            print(json.dumps(data), file=f)
-
+        with open('cache.json', 'w') as f:
+            cache['timestamp'] = datetime.now().isoformat()
+            cache_add_range(cache, after.date().isoformat(), before.date().isoformat())
+            print(cache['ranges'])
+            print(json.dumps(cache), file=f)
     finally:
         os.chdir(exec_wd)
 
 
+def main():
+    args = parser.parse_args()
+    gather(args.after, args.before, args.feeds)
+
 if __name__ == '__main__':
-    main(parser.parse_args())
+    main()
