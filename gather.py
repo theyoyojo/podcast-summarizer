@@ -115,6 +115,7 @@ def gather(after, before, feeds):
                     'transcript': None,
                     'bullets': None
                 })
+                need_download.append(cache['count'])
                 cache['count'] += 1
     exec_wd = pathlib.Path.cwd()
     try:
