@@ -111,19 +111,25 @@ def gather(after, before, feeds):
                     'timestamp': publication_date.isoformat(),
                     'more_info': entry.get('link', None),
                     'download': download_link,
+                    'audio': None,
+                    'transcript': None,
+                    'bullets': None
                 })
                 cache['count'] += 1
     exec_wd = pathlib.Path.cwd()
     try:
-        if len(need_download) > 0:
-            pbar = tqdm.tqdm(total=len(need_download),
-                             desc="Downloading Podcasts")
-            pbar.update(0)
-            os.chdir(cache['dir'])
-            for i in need_download:
+        pbar = tqdm.tqdm(total=len(cache['count']),
+                         desc="Downloading Podcasts")
+        pbar.update(0)
+        os.chdir(cache['dir'])
+        for i in need_download:
+            name = f'{i}.mp3'
+
+            if cache['podcasts'][i]['audio'] is None:
                 download_file(cache['podcasts'][i]['download']['href'],
-                              local_filename=f'{i}.mp3')
-                pbar.update(1)
+                              local_filename=name)
+                cache['podcasts'][i]['audio'] = name
+            pbar.update(1)
         cache_write(cache, after, before)
     finally:
         os.chdir(exec_wd)
