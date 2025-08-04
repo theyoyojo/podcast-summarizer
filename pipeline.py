@@ -11,8 +11,8 @@ from utility import load_cache, date_type
 # example invocation: ./pipeline.py -a 2025-07-01 -b 2025-08-01
 def pipeline(after, before, feeds):
     gather(after, before, feeds)
-    cache = load_cache()
-    transcribe(cache["dir"])
+    cache = load_cache(f'.cache-{feeds}')
+    transcribe(feeds)
     pbar = tqdm.tqdm(total=cache['count'], desc="Asking ChatGPT")
     pbar.update(0)
     general_query = 'Give me a short report using the following input data:\n'

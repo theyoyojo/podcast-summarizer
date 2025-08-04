@@ -6,8 +6,8 @@ import warnings
 import whisper
 from utility import load_cache, cache_query, cache_write
 
-def transcribe(subdirectory_name):
-    cache = load_cache(subdirectory_name)
+def transcribe(feeds):
+    cache = load_cache(f'.cache-{feeds}')
 
     warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
@@ -22,17 +22,17 @@ def transcribe(subdirectory_name):
 
 parser = argparse.ArgumentParser(prog='trancribe')
 
-parser.add_argument('-d',
-                    '--directory',
+parser.add_argument('-f',
+                    '--feeds',
                     type=str,
                     required=True,
-                    help='select directory with podcast files and directory')
+                    help='select json tile with rss feed list')
 
 model = whisper.load_model('base')
 
 def main():
     args = parser.parse_args()
-    transcribe(args.directory)
+    transcribe(args.feeds)
 
 if __name__ == '__main__':
     main()
