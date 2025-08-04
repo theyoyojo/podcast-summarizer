@@ -12,7 +12,7 @@ import tqdm
 
 from dataclasses import dataclass
 from datetime import datetime
-from utility import date_type, load_cache, cache_add_range
+from utility import date_type, load_cache, cache_add_range, cache_query, cache_write
 
 @dataclass
 class Podcast:
@@ -95,41 +95,36 @@ def gather(after, before, feeds):
 
     cache = load_cache(f'.cache-{feeds}')
 
+    need_download = []
     for feed in feed_data:
-        found=0
         for entry in feed.entries:
             if not hasattr(entry, "published_parsed"):
                 continue
             publication_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
 
+            if cache_query(cache, publication_date, publication_date):
+                continue
             if after <= publication_date <= before:
-                found += 1
                 download_link = entry.get('enclosures', [])[0] if entry.get('enclosures', []) else None
                 cache['podcasts'].append({
                     'title': entry.title,
                     'timestamp': publication_date.isoformat(),
                     'more_info': entry.get('link', None),
-                    'download': download_link
+                    'download': download_link,
                 })
                 cache['count'] += 1
-                #print(f'[{cache["count"]}]', cache, '\n-------\n\n')
-        if not found:
-            pass
     exec_wd = pathlib.Path.cwd()
     try:
-        pbar = tqdm.tqdm(total=cache['count'],
-                         desc="Downloading Podcasts")
-        pbar.update(0)
-        os.chdir(cache['dir'])
-        for i in range(cache['count']):
-            #download_file(cache['podcasts'][i]['download']['href'],
-            #              local_filename=f'{i}.mp3')
-            pbar.update(1)
-        with open('cache.json', 'w') as f:
-            cache['timestamp'] = datetime.now().isoformat()
-            cache_add_range(cache, after.date().isoformat(), before.date().isoformat())
-            print(cache['ranges'])
-            print(json.dumps(cache), file=f)
+        if len(need_download) > 0:
+            pbar = tqdm.tqdm(total=len(need_download),
+                             desc="Downloading Podcasts")
+            pbar.update(0)
+            os.chdir(cache['dir'])
+            for i in need_download:
+                download_file(cache['podcasts'][i]['download']['href'],
+                              local_filename=f'{i}.mp3')
+                pbar.update(1)
+        cache_write(cache, after, before)
     finally:
         os.chdir(exec_wd)
 

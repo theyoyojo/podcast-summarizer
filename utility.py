@@ -95,5 +95,14 @@ def range_interesection(first, second):
             else:
                 return False
 
-def cache_query(cache, after, before, fetch=False):
-    pass
+def cache_query(cache, after, before):
+    for r in cache['ranges']:
+        if r[0] <= after.date().isoformat() and before.date().isoformat() <= r[1]:
+            return True
+    return False
+
+def cache_write(cache, after, before):
+    with open('cache.json', 'w') as f:
+        cache['timestamp'] = datetime.now().isoformat()
+        cache_add_range(cache, after.date().isoformat(), before.date().isoformat())
+        print(json.dumps(cache), file=f)
