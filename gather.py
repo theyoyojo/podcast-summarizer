@@ -118,7 +118,7 @@ def gather(after, before, feeds):
                 cache['count'] += 1
     exec_wd = pathlib.Path.cwd()
     try:
-        pbar = tqdm.tqdm(total=len(cache['count']),
+        pbar = tqdm.tqdm(total=cache['count'],
                          desc="Downloading Podcasts")
         pbar.update(0)
         os.chdir(cache['dir'])
