@@ -2,6 +2,7 @@
 
 import db
 import os
+import sys
 from tqdm import tqdm
 from utility import parse_abf
 
@@ -23,7 +24,7 @@ def download(after, before, feeds):
                 to_download.append(entry)
 
     if len(to_download) < 1:
-        print("Nothing to download.")
+        print("Nothing to download.", file=sys.stderr)
         return
 
     pbar = tqdm(total=len(to_download), desc="Downloading Content")

@@ -2,6 +2,7 @@
 
 import db
 import os
+import sys
 import argparse
 from tqdm import tqdm
 import warnings
@@ -31,7 +32,7 @@ def transcribe(after, before, feeds):
                 to_transcribe.append(entry)
 
     if len(to_transcribe) == 0:
-        print("Nothing to transcribe.")
+        print("Nothing to transcribe.", file=sys.stderr)
         return
 
     pbar = tqdm(total=len(to_transcribe), desc="Transcribing Audio")

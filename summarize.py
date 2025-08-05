@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import db
+import sys
 from utility import parse_abf
 from chatgpt import chatgpt
 
@@ -19,7 +20,7 @@ def summarize(after, before, feeds):
                 to_summarize.append((entry, text))
 
     if len(to_summarize) == 0:
-        print("Nothing to summarize.")
+        print("Nothing to summarize.", file=sys.stderr)
         return
 
     pbar = tqdm(total=len(to_summarize), desc="Summarizing Text")
