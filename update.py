@@ -1,14 +1,16 @@
-#!/bin/env python3
+#!/usr/bin/env python3
+
 import argparse
 import feedparser
 import json
 import datetime
 import time
 import db
+
 from tqdm import tqdm
 
 # feeds is a json file containing a list of {"title":<text>, "rss":<feed link>}
-def import_(feeds):
+def update(feeds):
     try:
         with open(feeds, 'r', encoding='utf-8') as f:
             feeds_json = json.loads(f.read())
@@ -30,15 +32,15 @@ def import_(feeds):
             db.insert_entry(feed, entry)
         pbar.update(1)
 
-parser = argparse.ArgumentParser(prog='import')
+parser = argparse.ArgumentParser(prog='update')
 
 parser.add_argument('-f',
                     '--feeds',
                     type=str,
                     required=True,
-                    help='select json tile with rss feed list to import')
+                    help='select json tile with rss feed list to update')
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    import_(args.feeds)
+    update(args.feeds)

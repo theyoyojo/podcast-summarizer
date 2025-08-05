@@ -1,19 +1,25 @@
-#!/bin/env python3
+#!/usr/bin/env python3
 
 import db
 import os
 import argparse
 from tqdm import tqdm
 import warnings
-import whisper
 from utility import date_type
+
+try:
+    import mlx_whisper
+    model = mlx_whisper.load_model("base.en")
+except:
+    import whisper
+    model = whisper.load_model('base')
 
 def transcribe(after, before, feeds):
     feed_list = db.get_feed_list(feeds)
     if not feed_list:
         print(f'fatal: no such feed list "{feeds}" found in database')
         exit(1)
-    #warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+    warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
     os.makedirs('.cache', exist_ok=True)
 
@@ -21,7 +27,7 @@ def transcribe(after, before, feeds):
     to_transcribe = []
     for feedref in feed_list.feeds:
         for entry in feedref.feed.entries_in_range(after, before):
-            if entry.summarywork_type == 'audiosummarywork' and entry.summarywork.audio_path is not None:
+            if entry.summarywork_type == 'audiosummarywork' and entry.summarywork.audio_path is not None and entry.summarywork.transcript is None:
                 to_transcribe.append(entry)
 
     if len(to_transcribe) == 0:
@@ -32,8 +38,9 @@ def transcribe(after, before, feeds):
     pbar.update(0)
     for e in to_transcribe:
         result = model.transcribe(e.summarywork.audio_path)
-        e.summarywork.transcript = result['text']
-        e.summarywork.save()
+        sw = e.summarywork
+        sw.transcript = result['text']
+        sw.save()
         pbar.update(1)
 
 parser = argparse.ArgumentParser(prog='trancribe')
@@ -56,7 +63,6 @@ parser.add_argument('-f',
                     required=True,
                     help='select json tile with rss feed list')
 
-model = whisper.load_model('base')
 
 
 if __name__ == '__main__':

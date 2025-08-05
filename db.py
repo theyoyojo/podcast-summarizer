@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/env python3
 
 # import logging
 
@@ -26,17 +26,59 @@ class BaseModel(Model):
 class FeedList(BaseModel):
     source = CharField(max_length=255, null=False, unique=True)
 
-# class Episode(BaseModel):
-#     # sha256 output
-#     id = CharField(primary_key=True, max_length=64)
-#     title = TextField()
-#     audio_href = TextField()
-#     timestamp = TextField()
-#     info_href = TextField()
-#     audio_filename = TextField()
-#     transcript_filename = TextField()
-#     bullets_filename = TextField()
-#     feed = ForeignKeyField(Feed, backref='episodes')
+
+# a summary of summaries
+class Report(BaseModel):
+    timestamp = DateTimeField()
+    after = DateTimeField()
+    before = DateTimeField()
+    text = TextField(null=True)
+    feedlist = ForeignKeyField(FeedList, backref='reports', unique=True, null=True)
+
+    @property
+    def audiosummarywork(self):
+        return (AudioSummaryWork
+                .select()
+                .join(Reportable, on=(Reportable.reportable_id == self.id))
+                .join(Report)
+                .where(
+                    (Report.id == self.id) &
+                    (Reportable.reportable_type == 'audiosummarywork')
+                ))
+    @property
+    def articlesummarywork(self):
+        return (ArticleSummaryWork
+                .select()
+                .join(Reportable, on=(Reportable.reportable_id == self.id))
+                .join(Report)
+                .where(
+                    (Report.id == self.id) &
+                    (Reportable.reportable_type == 'articlesummarywork')
+                ))
+
+    def __str__(self):
+        return f'{self.text}\n\n*[Generated at {self.timestamp} for {self.feedlist.source} from after {self.after} to before {self.before}]*'
+
+
+def insert_report(after, before, feedlist, text, entries):
+    report, _ = Report.get_or_create(
+        defaults={
+            'timestamp': datetime.now().isoformat(),
+            'after': after,
+            'before': before,
+            'text': text,
+            'feedlist': feedlist,
+        }
+    )
+
+    for e in entries:
+        Reportable.get_or_create(
+            defaults={
+                'report': report,
+                'reportable_id': e.summarywork_id,
+                'reportable_type': e.summarywork_type,
+            }
+        )
 
 
 class Feed(BaseModel):
@@ -128,6 +170,12 @@ class AudioSummaryWork(BaseModel):
         self.audio_path = path
         self.save()
 
+    @property
+    def reports(self):
+        return (Report.select().join(Reportable).where(
+            (reportable_id == self.id) &
+            (reportable_type == 'audiosummarywork')))
+
 class ArticleSummaryWork(BaseModel):
     # same ID as entry
     id = CharField(primary_key=True, max_length=64, null=False, unique=True)
@@ -145,12 +193,25 @@ class ArticleSummaryWork(BaseModel):
         self.full_text = download_file(self.entry.enclosures[0].url, return_data=True)
         self.save()
 
+    @property
+    def reports(self):
+        return (Report.select().join(Reportable).where(
+            (reportable_id == self.id) &
+            (reportable_type == 'articlesummarywork')))
+
+
+class Reportable(BaseModel):
+    report = ForeignKeyField(Report, backref="reportables")
+    reportable_id = CharField(max_length=64)
+    reportable_type = CharField(max_length=32)
+
+
 class Entry(BaseModel):
     # Related feed
     feed = ForeignKeyField(Feed, backref='entries', on_delete='CASCADE')
 
-    # the unique summarizable for this entry, may be audio, text, and maybe something else
-    summarywork_id = IntegerField()
+    # the unique summarywork for this entry, may be audio, text, and maybe something else
+    summarywork_id = CharField(max_length=64)
     summarywork_type = CharField(max_length=32)
     
     @property
@@ -409,6 +470,7 @@ def insert_entry(feed, entry_data):
 
     return entry
 
+
 def get_entry(entry_id):
     return Entry.get_by_id(entry_id)
 
@@ -422,6 +484,17 @@ def insert_feed_list(feeds):
 
 def get_feed_list(feeds):
     return FeedList.select().where(FeedList.source == feeds).first()
+
+def get_latest_report(after, before, feeds):
+    return (Report.select()
+            .join(FeedList)
+            .where(
+                (Report.after == after) &
+                (Report.before == before) &
+                (FeedList.source == feeds))
+            .order_by(Report.timestamp.desc())
+            .first())
+    
 
 def add_feed_list_feed(feed_list, feed):
     return FeedListFeed.get_or_create(feed_list=feed_list, feed=feed)

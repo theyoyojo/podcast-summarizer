@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import openai
@@ -24,10 +24,10 @@ def main():
     args = parser.parse_args()
     print(f'ChatGPT: {chatgpt(args.query)}')
 
-def chatgpt(query, json=False):
+def chatgpt(query):
     messages=[]
-    if json:
-        messages += [{"role": "system", "content": "Output valid JSON"},]
+    # if json:
+    #    messages += [{"role": "system", "content": "Output valid JSON"},]
     messages +=[{"role": "user", "content": query }]
 
 

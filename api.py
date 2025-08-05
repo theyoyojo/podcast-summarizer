@@ -43,28 +43,14 @@ class SimpleAPIHandler(BaseHTTPRequestHandler):
         query_str = split[1] if len(split) > 1 else ''
         queries = urllib.parse.parse_qs(query_str)
         content = []
+
         match raw_path.split('/'):
-            case ['','api', target] if (after := queries.get('after', None)) and (before := queries.get('before', None)):
-                dir_list = make_dir_list(after[0], before[0])
-                for d in dir_list:
-                    print(d)
-                    match target:
-                        case 'summary':
-                            file = f'{d}/general.summary.txt'
-                            if os.path.exists(file):
-                                with open(file, 'r') as f:
-                                    content.append(f.read())
-                        case 'directory':
-                            file = f'{d}/directory.json'
-                            if os.path.exists(file):
-                                with open(file, 'r') as f:
-                                    content.append(f.read())
-                                    self.return_json([json.loads(j) for j in content])
-                        case _:
-                            self.send_response(404)
-                            self.end_headers()
-                            self.wfile.write(b"Not Found")
-                self.return_json(content)
+            case ['','api', target] if (after := queries.get('after', None)) and (before := queries.get('before', None)) and (feeds := queries.get('feeds')):
+
+                if report := db.get_latest_report(after, before, feeds):
+                    return_json(report)
+                else:
+                    return_json('no extant generated report')
             case _:
                 self.send_response(404)
                 self.end_headers()
