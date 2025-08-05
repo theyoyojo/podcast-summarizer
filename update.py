@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
+import db
+import json
 import argparse
 import feedparser
-import json
-import datetime
-import time
-import db
 
 from tqdm import tqdm
+
 
 # feeds is a json file containing a list of {"title":<text>, "rss":<feed link>}
 def update(feeds):
@@ -25,12 +24,13 @@ def update(feeds):
     for f in feeds_json:
         parsed = feedparser.parse(f['rss'])
         if parsed.bozo:
-            print(f'failed to parse "{p["rss"]}": {feed.bozo_exception}')
+            print(f'failed to parse "{f["rss"]}": {parsed.bozo_exception}')
         feed = db.insert_feed(parsed.feed)
         db.add_feed_list_feed(feed_list=feed_list, feed=feed)
         for entry in parsed.entries:
             db.insert_entry(feed, entry)
         pbar.update(1)
+
 
 parser = argparse.ArgumentParser(prog='update')
 

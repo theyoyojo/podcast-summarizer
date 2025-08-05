@@ -3,24 +3,22 @@
 import db
 import os
 import sys
-import argparse
 from tqdm import tqdm
 import warnings
-from utility import date_type, parse_abf
+from utility import parse_abf
 
 try:
     import mlx_whisper
     model = mlx_whisper.load_model("base.en")
-except:
+except ModuleNotFoundError:
     import whisper
     model = whisper.load_model('base')
 
+
 def transcribe(after, before, feeds):
-    feed_list = db.get_feed_list(feeds)
-    if not feed_list:
-        print(f'fatal: no such feed list "{feeds}" found in database')
-        exit(1)
-    warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+    feed_list = db.get_feed_list_or_die(feeds)
+    filtered_msg = "FP16 is not supported on CPU; using FP32 instead"
+    warnings.filterwarnings("ignore", message=filtered_msg)
 
     os.makedirs('.cache', exist_ok=True)
 
@@ -28,7 +26,9 @@ def transcribe(after, before, feeds):
     to_transcribe = []
     for feedref in feed_list.feeds:
         for entry in feedref.feed.entries_in_range(after, before):
-            if entry.summarywork_type == 'audiosummarywork' and entry.summarywork.audio_path is not None and entry.summarywork.transcript is None:
+            if entry.summarywork_type == 'audiosummarywork' and \
+                    entry.summarywork.audio_path is not None and \
+                    entry.summarywork.transcript is None:
                 to_transcribe.append(entry)
 
     if len(to_transcribe) == 0:
@@ -43,6 +43,7 @@ def transcribe(after, before, feeds):
         sw.transcript = result['text']
         sw.save()
         pbar.update(1)
+
 
 if __name__ == '__main__':
     args = parse_abf('transcribe')

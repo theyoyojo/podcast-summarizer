@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from peewee import SqliteDatabase, Model, TextField, CharField, IntegerField, ForeignKeyField, DateTimeField
+from peewee import SqliteDatabase, Model, TextField, CharField, \
+    IntegerField, ForeignKeyField, DateTimeField
 import hashlib
 from datetime import datetime
 import time
@@ -8,9 +9,11 @@ from utility import download_file
 
 DB = SqliteDatabase("sources.db")
 
+
 class BaseModel(Model):
     class Meta:
         database = DB
+
 
 class FeedList(BaseModel):
     source = CharField(max_length=255, null=False, unique=True)
@@ -34,6 +37,7 @@ class Report(BaseModel):
                     (Report.id == self.id) &
                     (Reportable.reportable_type == 'audiosummarywork')
                 ))
+
     @property
     def articlesummarywork(self):
         return (ArticleSummaryWork
@@ -46,7 +50,12 @@ class Report(BaseModel):
                 ))
 
     def __str__(self):
-        return f'{self.text}\n\n*[Generated at {self.timestamp} for {self.feedlist.source} from after {self.after} to before {self.before}]*'
+        return f'''{self.text}\n\n\
+                *[Generated at {self.timestamp} \
+                from {self.feedlist.source} \
+                after {self.after} \
+                before {self.before}]*
+                '''.strip()
 
 
 def insert_report(after, before, feedlist, text, entries):
@@ -71,34 +80,35 @@ def insert_report(after, before, feedlist, text, entries):
 
     return report
 
+
 class Feed(BaseModel):
     # Feed unique ID
     id = CharField(primary_key=True, max_length=64, null=False, unique=True)
 
     # Title of the feed
     title = CharField(max_length=255, null=True)
-    
+
     # URL to the website or feed source
     link = CharField(max_length=2048, null=True)
-    
+
     # Description or subtitle of the feed
     description = TextField(null=True)
-    
+
     # Language code (e.g., "en-US")
     language = CharField(max_length=10, null=True)
-    
+
     # Last updated date/time as string
     updated = CharField(null=True)
-    
+
     # Parsed version of `updated`
     updated_parsed = DateTimeField(null=True)
-    
+
     # Feed author or publisher
     author = CharField(max_length=100, null=True)
-    
+
     # Copyright or rights information
     rights = CharField(max_length=255, null=True)
-    
+
     # Subtitle or tagline of the feed
     subtitle = CharField(max_length=255, null=True)
 
@@ -147,7 +157,7 @@ class AudioSummaryWork(BaseModel):
     audio_path = CharField(max_length=2048, null=True)
     transcript = TextField(null=True)
     bullet_points = TextField(null=True)
-    
+
     @property
     def entry(self):
         return Entry.select().where(
@@ -166,6 +176,7 @@ class AudioSummaryWork(BaseModel):
             (reportable_id == self.id) &
             (reportable_type == 'audiosummarywork')))
 
+
 class ArticleSummaryWork(BaseModel):
     # same ID as entry
     id = CharField(primary_key=True, max_length=64, null=False, unique=True)
@@ -180,7 +191,8 @@ class ArticleSummaryWork(BaseModel):
                 (Entry.summarywork_type == 'articlesummarywork')).first()
 
     def download(self):
-        self.full_text = download_file(self.entry.enclosures[0].url, return_data=True)
+        self.full_text = download_file(self.entry.enclosures[0].url,
+                                       return_data=True)
         self.save()
 
     @property
@@ -200,10 +212,10 @@ class Entry(BaseModel):
     # Related feed
     feed = ForeignKeyField(Feed, backref='entries', on_delete='CASCADE')
 
-    # the unique summarywork for this entry, may be audio, text, and maybe something else
+    # the unique summarywork for this entry, may be audio, text, etc
     summarywork_id = CharField(max_length=64)
     summarywork_type = CharField(max_length=32)
-    
+
     @property
     def summarywork(self):
         match self.summarywork_type:
@@ -254,9 +266,11 @@ class Entry(BaseModel):
     # Author of the entry (up to 100 chars)
     author = CharField(max_length=100, null=True)
 
+
 class EntryAuthorDetail(BaseModel):
     # Related entry
-    entry = ForeignKeyField(Entry, backref='author_details', on_delete='CASCADE')
+    entry = ForeignKeyField(Entry,
+                            backref='author_details', on_delete='CASCADE')
 
     # Author's name (up to 100 chars)
     name = CharField(max_length=100, null=True)
@@ -295,7 +309,8 @@ class EntryContent(BaseModel):
 
 class EntryMediaContent(BaseModel):
     # Related entry
-    entry = ForeignKeyField(Entry, backref='media_contents', on_delete='CASCADE')
+    entry = ForeignKeyField(Entry,
+                            backref='media_contents', on_delete='CASCADE')
 
     # Media URL (up to 2048 chars)
     url = CharField(max_length=2048, null=True)
@@ -324,9 +339,12 @@ class EntryEnclosure(BaseModel):
 def hash_guid(guid):
     return hashlib.sha256((guid + "BIAS").encode('utf-8')).hexdigest()
 
+
 def insert_feed(feed_data):
     # error if none of these values exist to be hashed
-    feed_id = hash_guid(feed_data.get("id", feed_data.get("link", feed_data["title"])))
+    feed_id = hash_guid(feed_data.get("id",
+                                      feed_data.get("link",
+                                                    feed_data["title"])))
 
     feed, _ = Feed.get_or_create(
         id=feed_id,
@@ -336,7 +354,8 @@ def insert_feed(feed_data):
             'description': feed_data.get('description'),
             'language': feed_data.get('language'),
             'updated': feed_data.get('updated'),
-            'updated_parsed': datetime.fromtimestamp(time.mktime(feed_data.get('updated_parsed'))),
+            'updated_parsed': datetime.fromtimestamp(
+                time.mktime(feed_data.get('updated_parsed'))),
             'author': feed_data.get('author'),
             'rights': feed_data.get('rights'),
             'subtitle': feed_data.get('subtitle'),
@@ -365,7 +384,9 @@ def insert_feed(feed_data):
 
 def insert_entry(feed, entry_data):
     # error if none of these values exist to be hashed
-    entry_id = hash_guid(entry_data.get("id", entry_data.get("link", entry_data["title"])))
+    entry_id = hash_guid(entry_data.get("id",
+                                        entry_data.get("link",
+                                                       entry_data["title"])))
 
     entry, _ = Entry.get_or_create(
         id=entry_id,
@@ -375,9 +396,11 @@ def insert_entry(feed, entry_data):
             'link': entry_data.get('link'),
             'summary': entry_data.get('summary'),
             'published': entry_data.get('published'),
-            'published_parsed': datetime.fromtimestamp(time.mktime(entry_data.get('published_parsed'))),
+            'published_parsed': datetime.fromtimestamp(
+                time.mktime(entry_data.get('published_parsed'))),
             'updated': entry_data.get('updated'),
-            'updated_parsed': datetime.fromtimestamp(time.mktime(entry_data.get('updated_parsed'))),
+            'updated_parsed': datetime.fromtimestamp(
+                time.mktime(entry_data.get('updated_parsed'))),
             'author': entry_data.get('author'),
             'summarywork_id': 'INITIAL_ID',
             'summarywork_type': 'INITIAL_TYPE',
@@ -420,8 +443,7 @@ def insert_entry(feed, entry_data):
         )
 
     # Enclosures
-    # we handle the rare case of > 1 enclosure but only operate on the first with valid type
-    got_one=False
+    got_one = False
     for enclosure in entry_data.get('enclosures', []):
         if not got_one and 'type' in enclosure:
             match enclosure.type:
@@ -454,7 +476,11 @@ def insert_entry(feed, entry_data):
         EntryEnclosure.get_or_create(
             entry=entry,
             url=enclosure.get('url'),
-            length=int(enclosure.get('length', 0)) if enclosure.get('length') else None,
+            length=(
+                int(enclosure.get('length', 0))
+                if enclosure.get('length')
+                else None
+            ),
             type=enclosure.get('type'),
         )
 
@@ -464,18 +490,21 @@ def insert_entry(feed, entry_data):
 def get_entry(entry_id):
     return Entry.get_by_id(entry_id)
 
+
 def insert_feed_list(feeds):
     feed_list, _ = FeedList.get_or_create(
         source=feeds
     )
     return feed_list
 
-def get_feed_list(feeds):
+
+def get_feed_list_or_die(feeds):
     feed_list = FeedList.select().where(FeedList.source == feeds).first()
     if not feed_list:
         print(f'fatal: no such feed list "{feeds}" found in database')
         exit(1)
     return feed_list
+
 
 def get_latest_report(after, before, feeds):
     return (Report.select()
@@ -486,13 +515,15 @@ def get_latest_report(after, before, feeds):
                 (FeedList.source == feeds))
             .order_by(Report.timestamp.desc())
             .first())
-    
+
 
 def add_feed_list_feed(feed_list, feed):
     return FeedListFeed.get_or_create(feed_list=feed_list, feed=feed)
 
+
 def feed_directory():
     return [f.source for f in FeedList.select()]
-    
+
+
 if __name__ == '__main__':
     DB.create_tables(BaseModel.__subclasses__())

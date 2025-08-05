@@ -1,15 +1,15 @@
-import json
-import os
-import pathlib
-from datetime import datetime
 import requests
 import argparse
+from datetime import datetime
+
 
 def date_type(datestr):
     try:
         return datetime.strptime(datestr, "%Y-%m-%d")
     except ValueError:
-        raise argparse.ArgumentTypeError(f'Bad date argument: {datestr} (Excepted YYYY-MM-DD)')
+        raise argparse.ArgumentTypeError(
+                f'Bad date argument: {datestr} (Excepted YYYY-MM-DD)')
+
 
 def parse_abf(prog):
     parser = argparse.ArgumentParser(prog=prog)
@@ -31,29 +31,21 @@ def parse_abf(prog):
     return parser.parse_args()
 
 
-
 def download_file(url, local_filename=None, return_data=False):
-    """
-    Downloads a file from a URL and saves it to the current directory.
-
-    Args:
-        url (str): The URL of the file to download.
-        local_filename (str, optional): The name to save the file as.
-                                         If None, the function will try to
-                                         determine the filename from the URL.
-                                         Defaults to None.
-    """
     if local_filename is None and not return_data:
         local_filename = url.split('/')[-1]
 
     headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+                'User-Agent': '''
+                    Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+                    AppleWebKit/537.36 (KHTML, like Gecko) \
+                    Chrome/58.0.3029.110 Safari/537.3'
+                    '''.strip()
     }
-
 
     try:
         with requests.get(url, headers=headers, stream=True) as r:
-            r.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+            r.raise_for_status()
             if return_data:
                 return r.content
             else:

@@ -9,10 +9,7 @@ from utility import parse_abf
 
 # after is inclusive but before is exclusive
 def download(after, before, feeds):
-    feed_list = db.get_feed_list(feeds)
-    if not feed_list:
-        print(f'fatal: no such feed list "{feeds}" found in database')
-        exit(1)
+    feed_list = db.get_feed_list_or_die(feeds)
 
     os.makedirs('.cache', exist_ok=True)
 
