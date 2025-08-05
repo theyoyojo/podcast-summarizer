@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
 
-# import logging
-
-# # 1. Get the 'peewee' logger.
-# logger = logging.getLogger('peewee')
-
-# # 2. Set the logger level to DEBUG.
-# logger.setLevel(logging.DEBUG)
-
-# # 3. Add a handler to send logs to the console.
-# logger.addHandler(logging.StreamHandler())
-
 from peewee import SqliteDatabase, Model, TextField, CharField, IntegerField, ForeignKeyField, DateTimeField
 import hashlib
 from datetime import datetime
@@ -80,6 +69,7 @@ def insert_report(after, before, feedlist, text, entries):
             }
         )
 
+    return report
 
 class Feed(BaseModel):
     # Feed unique ID

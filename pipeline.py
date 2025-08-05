@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import db
-
 from utility import parse_abf
 from update import update
 from download import download
@@ -16,8 +14,8 @@ def pipeline(after, before, feeds):
     download(after, before, feeds)
     transcribe(after, before, feeds)
     summarize(after, before, feeds)
-    report(after, before, feeds)
-    print(db.get_latest_report(after, before, feeds))
+    r = report(after, before, feeds)
+    print(r)
 
 
 if __name__ == '__main__':

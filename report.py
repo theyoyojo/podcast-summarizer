@@ -26,7 +26,7 @@ def report(after, before, feeds):
         report_text = chatgpt(report_query)
     else:
         report_text = 'Nothing to report.'
-    db.insert_report(after, before, feed_list, report_text, report_entries)
+    return db.insert_report(after, before, feed_list, report_text, report_entries)
 
 if __name__ == '__main__':
     args = parse_abf('report')
