@@ -2,6 +2,7 @@
 
 import db
 import sys
+from tqdm import tqdm
 from utility import parse_abf
 from chatgpt import chatgpt
 
@@ -31,7 +32,6 @@ def summarize(after, before, feeds):
         sw.bullet_points = summary
         sw.save()
         pbar.update(1)
-
 
 if __name__ == '__main__':
     args = parse_abf('summarize')
