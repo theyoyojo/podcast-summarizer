@@ -21,7 +21,7 @@ def report(after, before, feeds):
 
     print('Generating report...', file=sys.stderr)
     if len(to_report) > 0:
-        report_query = f'Combine all subsequent information, which is a series of docuuments separated by a single line containing "=====" that each summarize the key points from important information sources, into a clear and informative report:\n\n {"\n=====\n".join(to_report)}'
+        report_query = f'Combine all subsequent information, which is a series of docuuments separated by a single line containing "=====" that each summarize the key points from important information sources, into a clear and informative report:\n\n {(chr(10) + "=====" + chr(10)).join(to_report)}'
 
         report_text = chatgpt(report_query)
     else:
