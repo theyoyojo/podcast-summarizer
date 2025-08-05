@@ -15,8 +15,7 @@ class SimpleAPIHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps({'count': len(data),
-                                     'timestamp_served': datetime.now().timestamp(),
+        self.wfile.write(json.dumps({'timestamp_served': datetime.now().timestamp(),
                                      'data': data}).encode('utf-8'))
 
     def do_GET(self):
