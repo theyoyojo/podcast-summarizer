@@ -4,6 +4,7 @@ import db
 import os
 import sys
 import argparse
+import multiprocessing
 from tqdm import tqdm
 import warnings
 from utility import date_type, parse_abf
@@ -37,12 +38,16 @@ def transcribe(after, before, feeds):
 
     pbar = tqdm(total=len(to_transcribe), desc="Transcribing Audio")
     pbar.update(0)
-    for e in to_transcribe:
-        result = model.transcribe(e.summarywork.audio_path)
-        sw = e.summarywork
-        sw.transcript = result['text']
-        sw.save()
-        pbar.update(1)
+    for i in range(0, len(to_transcribe), 5):
+        top = 5 if i + 5 <= len(to_transcribe) else len(to_transcribe) % 5
+        with multiprocessing.Pool(top) as p:
+            results = p.map(model.transcribe, [to_transcribe[j].summarywork.audio_path for j in range(i, i+top)])
+        for j in range(i, i+top):
+            e = to_transcribe[i]
+            sw = e.summarywork
+            sw.transcript = results[j]['text']
+            sw.save()
+            pbar.update(1)
 
 if __name__ == '__main__':
     args = parse_abf('transcribe')
