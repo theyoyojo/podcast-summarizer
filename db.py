@@ -73,8 +73,8 @@ def insert_report(after, before, feedlist, text, entries):
 
     for e in entries:
         Reportable.get_or_create(
+            report=report,
             defaults={
-                'report': report,
                 'reportable_id': e.summarywork_id,
                 'reportable_type': e.summarywork_type,
             }
