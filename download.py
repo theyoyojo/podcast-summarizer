@@ -1,42 +1,40 @@
 #!/bin/env python3
 
+from utility import date_type, download_file
+import argparse
 import db
 import os
-import argparse
 from tqdm import tqdm
-import warnings
-import whisper
-from utility import date_type
 
-def transcribe(after, before, feeds):
+
+# after is inclusive but before is exclusive
+def download(after, before, feeds):
     feed_list = db.get_feed_list(feeds)
     if not feed_list:
         print(f'fatal: no such feed list "{feeds}" found in database')
         exit(1)
-    #warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
     os.makedirs('.cache', exist_ok=True)
 
     # save to a list so we can have an accurate progress bar later
-    to_transcribe = []
+    to_download = []
     for feedref in feed_list.feeds:
         for entry in feedref.feed.entries_in_range(after, before):
-            if entry.summarywork_type == 'audiosummarywork' and entry.summarywork.audio_path is not None:
-                to_transcribe.append(entry)
+            if not entry.is_downloaded():
+                to_download.append(entry)
 
-    if len(to_transcribe) == 0:
-        print("Nothing to transcribe.")
+    if len(to_download) < 1:
+        print("Nothing to download.")
         return
 
-    pbar = tqdm(total=len(to_transcribe), desc="Transcribing Audio")
+    pbar = tqdm(total=len(to_download), desc="Downloading Content")
     pbar.update(0)
-    for e in to_transcribe:
-        result = model.transcribe(e.summarywork.audio_path)
-        e.summarywork.transcript = result['text']
-        e.summarywork.save()
+    for e in to_download:
+        e.download()
         pbar.update(1)
 
-parser = argparse.ArgumentParser(prog='trancribe')
+
+parser = argparse.ArgumentParser(prog='download')
 
 parser.add_argument('-a',
                     '--after',
@@ -56,9 +54,6 @@ parser.add_argument('-f',
                     required=True,
                     help='select json tile with rss feed list')
 
-model = whisper.load_model('base')
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parser.parse_args()
-    transcribe(args.after, args.before, args.feeds)
+    download(args.after, args.before, args.feeds)

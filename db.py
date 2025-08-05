@@ -1,9 +1,21 @@
 #!/bin/env python3
 
+# import logging
+
+# # 1. Get the 'peewee' logger.
+# logger = logging.getLogger('peewee')
+
+# # 2. Set the logger level to DEBUG.
+# logger.setLevel(logging.DEBUG)
+
+# # 3. Add a handler to send logs to the console.
+# logger.addHandler(logging.StreamHandler())
+
 from peewee import SqliteDatabase, Model, TextField, CharField, IntegerField, ForeignKeyField, DateTimeField
 import hashlib
 from datetime import datetime
 import time
+from utility import download_file
 
 DB = SqliteDatabase("sources.db")
 
@@ -58,6 +70,14 @@ class Feed(BaseModel):
     # Subtitle or tagline of the feed
     subtitle = CharField(max_length=255, null=True)
 
+    # after is inclusive but before is exclusive
+    def entries_in_range(self, after, before):
+        entries = self.entries.select().where(
+                (after <= Entry.published_parsed) &
+                (Entry.published_parsed < before)
+            ).execute()
+        return entries
+
 
 class FeedListFeed(BaseModel):
     feed = ForeignKeyField(Feed, backref='feed_list')
@@ -89,9 +109,72 @@ class FeedImage(BaseModel):
     link = CharField(max_length=2048, null=True)
 
 
+class AudioSummaryWork(BaseModel):
+    # same ID as entry
+    id = CharField(primary_key=True, max_length=64, null=False, unique=True)
+    audio_path = CharField(max_length=2048, null=True)
+    transcript = TextField(null=True)
+    bullet_points = TextField(null=True)
+    
+    @property
+    def entry(self):
+        return Entry.select().where(
+                (Entry.summarywork_id == self.id) &
+                (Entry.summarywork_type == 'audiosummarywork')).first()
+
+    def download(self):
+        path = f'.cache/{self.entry.id}.mp3'
+        download_file(self.entry.enclosures[0].url, local_filename=path)
+        self.audio_path = path
+        self.save()
+
+class ArticleSummaryWork(BaseModel):
+    # same ID as entry
+    id = CharField(primary_key=True, max_length=64, null=False, unique=True)
+    # might be in HTML
+    full_text = TextField(null=True)
+    bullet_points = TextField(null=True)
+
+    @property
+    def entry(self):
+        return Entry.select().where(
+                (Entry.summarywork_id == self.id) &
+                (Entry.summarywork_type == 'articlesummarywork')).first()
+
+    def download(self):
+        self.full_text = download_file(self.entry.enclosures[0].url, return_data=True)
+        self.save()
+
 class Entry(BaseModel):
     # Related feed
     feed = ForeignKeyField(Feed, backref='entries', on_delete='CASCADE')
+
+    # the unique summarizable for this entry, may be audio, text, and maybe something else
+    summarywork_id = IntegerField()
+    summarywork_type = CharField(max_length=32)
+    
+    @property
+    def summarywork(self):
+        match self.summarywork_type:
+            case 'audiosummarywork':
+                return AudioSummaryWork.get_by_id(self.summarywork_id)
+            case 'articlesummarywork':
+                return ArticleSummaryWork.get_by_id(self.summarywork_id)
+            case _:
+                return None
+
+    def is_downloaded(self):
+        match self.summarywork_type:
+            case 'audiosummarywork':
+                return self.summarywork.audio_path is not None
+            case 'articlesummarywork':
+                return self.summarywork.full_text is not None
+            case _:
+                return False
+
+    def download(self):
+        if not self.is_downloaded():
+            self.summarywork.download()
 
     # Unique identifier of the entry (64 chars in sha256)
     id = CharField(primary_key=True, max_length=64)
@@ -119,7 +202,6 @@ class Entry(BaseModel):
 
     # Author of the entry (up to 100 chars)
     author = CharField(max_length=100, null=True)
-
 
 class EntryAuthorDetail(BaseModel):
     # Related entry
@@ -189,10 +271,10 @@ class EntryEnclosure(BaseModel):
 
 
 def hash_guid(guid):
-    return hashlib.sha256(guid.encode('utf-8')).hexdigest()
+    return hashlib.sha256((guid + "BIAS").encode('utf-8')).hexdigest()
 
 def insert_feed(feed_data):
-    # error if none of these values has be hashed
+    # error if none of these values exist to be hashed
     feed_id = hash_guid(feed_data.get("id", feed_data.get("link", feed_data["title"])))
 
     feed, _ = Feed.get_or_create(
@@ -231,7 +313,7 @@ def insert_feed(feed_data):
 
 
 def insert_entry(feed, entry_data):
-    # error if none of these values has be hashed
+    # error if none of these values exist to be hashed
     entry_id = hash_guid(entry_data.get("id", entry_data.get("link", entry_data["title"])))
 
     entry, _ = Entry.get_or_create(
@@ -246,6 +328,8 @@ def insert_entry(feed, entry_data):
             'updated': entry_data.get('updated'),
             'updated_parsed': datetime.fromtimestamp(time.mktime(entry_data.get('updated_parsed'))),
             'author': entry_data.get('author'),
+            'summarywork_id': 'INITIAL_ID',
+            'summarywork_type': 'INITIAL_TYPE',
         }
     )
 
@@ -285,7 +369,37 @@ def insert_entry(feed, entry_data):
         )
 
     # Enclosures
+    # we handle the rare case of > 1 enclosure but only operate on the first with valid type
+    got_one=False
     for enclosure in entry_data.get('enclosures', []):
+        if not got_one and 'type' in enclosure:
+            match enclosure.type:
+                case t if t.startswith('audio/'):
+                    entry.summarywork_type = 'audiosummarywork'
+                    entry.summarywork_id = AudioSummaryWork.get_or_create(
+                        id=entry.id,
+                        defaults={
+                            'audio_path': None,
+                            'transcript': None,
+                            'bullet_points': None,
+                        }
+                    )[0].id
+                    entry.save()
+                case t if t.startswith('text/'):
+                    entry.summarywork_type = 'articlesummarywork'
+                    entry.summarywork_id = ArticleSummaryWork.get_or_create(
+                        id=entry.id,
+                        defaults={
+                            'full_text': None,
+                            'bullet_points': None,
+                        }
+                    )[0].id
+                    entry.save()
+                case _:
+                    entry.summarywork_type = 'INVALID_TYPE'
+                    entry.summarywork_id = 'INVALID_ID'
+            entry.save()
+            got_one = True
         EntryEnclosure.get_or_create(
             entry=entry,
             url=enclosure.get('url'),
@@ -295,6 +409,8 @@ def insert_entry(feed, entry_data):
 
     return entry
 
+def get_entry(entry_id):
+    return Entry.get_by_id(entry_id)
 
 def insert_feed_list(feeds):
     feed_list, _ = FeedList.get_or_create(
@@ -304,9 +420,12 @@ def insert_feed_list(feeds):
     )
     return feed_list
 
+def get_feed_list(feeds):
+    return FeedList.select().where(FeedList.source == feeds).first()
+
 def add_feed_list_feed(feed_list, feed):
     return FeedListFeed.get_or_create(feed_list=feed_list, feed=feed)
-    
 
+    
 if __name__ == '__main__':
     DB.create_tables(BaseModel.__subclasses__())
