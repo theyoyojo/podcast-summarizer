@@ -33,7 +33,7 @@ class Report(BaseModel):
     after = DateTimeField()
     before = DateTimeField()
     text = TextField(null=True)
-    feedlist = ForeignKeyField(FeedList, backref='reports', unique=True, null=True)
+    feedlist = ForeignKeyField(FeedList, backref='reports', null=True)
 
     @property
     def audiosummarywork(self):
@@ -62,8 +62,8 @@ class Report(BaseModel):
 
 def insert_report(after, before, feedlist, text, entries):
     report, _ = Report.get_or_create(
+        timestamp=datetime.now().isoformat(),
         defaults={
-            'timestamp': datetime.now().isoformat(),
             'after': after,
             'before': before,
             'text': text,

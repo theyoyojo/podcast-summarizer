@@ -15,8 +15,7 @@ class SimpleAPIHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps({'timestamp_served': datetime.now().timestamp(),
-                                     'data': data}).encode('utf-8'))
+        self.wfile.write(json.dumps({'timestamp_served': datetime.now().timestamp(), 'data': data}).encode('utf-8'))
 
     def do_GET(self):
         split = self.path.split('?')
@@ -47,4 +46,3 @@ def run(server_class=ThreadingHTTPServer, handler_class=SimpleAPIHandler, port=8
 
 if __name__ == '__main__':
     run()
-

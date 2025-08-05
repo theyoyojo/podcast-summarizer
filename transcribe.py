@@ -5,7 +5,7 @@ import os
 import argparse
 from tqdm import tqdm
 import warnings
-from utility import date_type
+from utility import date_type, parse_abf
 
 try:
     import mlx_whisper
@@ -43,28 +43,6 @@ def transcribe(after, before, feeds):
         sw.save()
         pbar.update(1)
 
-parser = argparse.ArgumentParser(prog='trancribe')
-
-parser.add_argument('-a',
-                    '--after',
-                    type=date_type,
-                    required=True,
-                    help='select content published after this date')
-
-parser.add_argument('-b',
-                    '--before',
-                    type=date_type,
-                    required=True,
-                    help='select content published before this date')
-
-parser.add_argument('-f',
-                    '--feeds',
-                    type=str,
-                    required=True,
-                    help='select json tile with rss feed list')
-
-
-
 if __name__ == '__main__':
-    args = parser.parse_args()
+    args = parse_abf('transcribe')
     transcribe(args.after, args.before, args.feeds)

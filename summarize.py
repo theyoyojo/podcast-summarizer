@@ -1,51 +1,37 @@
 #!/usr/bin/env python3
 
-from transformers import pipeline
-import argparse
-import json
-import tqdm
-from utility import load_subdirectory
+import db
+from utility import parse_abf
+from chatgpt import chatgpt
 
-def do_summarize(file, chunk_max_size=1024):
-    text=None
-    with open(file, 'r') as f:
-        text = f.read()
-    chunks = [text[i:i+chunk_max_size] for i in range(0, len(text), chunk_max_size)]
-    summary = []
-    for chunk in chunks:
-        results = summarizer(chunk, max_length=130, min_length=30, do_sample=False)
-        summary.append(results[0]['summary_text'])
-    return ' '.join(summary)
+def summarize(after, before, feeds):
+    feed_list = db.get_feed_list(feeds)
+    if not feed_list:
+        print(f'fatal: no such feed list "{feeds}" found in database')
+        exit(1)
 
+    to_summarize = []
+    for feedref in feed_list.feeds:
+        for entry in feedref.feed.entries_in_range(after, before):
+            if ((entry.summarywork_type == 'audiosummarywork' and (text := entry.summarywork.transcript)) \
+                    or (entry.summarywork_type == 'articlesummarywork' and (text := entry.summarywork.full_text))) \
+                    and entry.summarywork.bullet_points is None:
+                to_summarize.append((entry, text))
 
-def summarize(subdirectory_name):
-    directory = load_subdirectory(subirectory_name)
-    
-    #warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+    if len(to_summarize) == 0:
+        print("Nothing to summarize.")
+        return
 
-    pbar = tqdm.tqdm(total=directory['count'], desc="Summarizing Text")
+    pbar = tqdm(total=len(to_summarize), desc="Summarizing Text")
     pbar.update(0)
-    for i in range(directory['count']):
-        result = do_summarize(f'{subdirectory_name}/{i}.txt')
-        with open(f'{subdirectory_name}/{i}.summary.txt', 'w') as f:
-            print(result, file=f)
-            pbar.update(1)
-
-parser = argparse.ArgumentParser(prog='summarize')
-
-parser.add_argument('-d',
-                    '--directory',
-                    type=str,
-                    required=True,
-                    help='select directory with text files and directory')
-
-
-summarizer = pipeline('summarization', model='facebook/bart-large-cnn')
-
-def main():
-    args = parser.parse_args()
-    summarize(args.directory)
+    for p in to_summarize:
+        summary = chatgpt(f'Give me a comprehensive summary of the following document in bullet point format: {p[1]}')
+        sw = p[0].summarywork
+        sw.bullet_points = summary
+        sw.save()
+        pbar.update(1)
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_abf('summarize')
+    summarize(args.after, args.before, args.feeds)

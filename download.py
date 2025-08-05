@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-from utility import date_type, download_file
-import argparse
 import db
 import os
 from tqdm import tqdm
+from utility import parse_abf
 
 
 # after is inclusive but before is exclusive
@@ -34,26 +33,6 @@ def download(after, before, feeds):
         pbar.update(1)
 
 
-parser = argparse.ArgumentParser(prog='download')
-
-parser.add_argument('-a',
-                    '--after',
-                    type=date_type,
-                    required=True,
-                    help='select content published after this date')
-
-parser.add_argument('-b',
-                    '--before',
-                    type=date_type,
-                    required=True,
-                    help='select content published before this date')
-
-parser.add_argument('-f',
-                    '--feeds',
-                    type=str,
-                    required=True,
-                    help='select json tile with rss feed list')
-
 if __name__ == "__main__":
-    args = parser.parse_args()
+    args = parse_abf('download')
     download(args.after, args.before, args.feeds)
