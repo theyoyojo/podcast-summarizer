@@ -476,9 +476,7 @@ def get_entry(entry_id):
 
 def insert_feed_list(feeds):
     feed_list, _ = FeedList.get_or_create(
-        defaults={
-            'source': feeds,
-        }
+        source=feeds
     )
     return feed_list
 
