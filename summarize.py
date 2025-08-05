@@ -7,10 +7,7 @@ from utility import parse_abf
 from chatgpt import chatgpt
 
 def summarize(after, before, feeds):
-    feed_list = db.get_feed_list(feeds)
-    if not feed_list:
-        print(f'fatal: no such feed list "{feeds}" found in database')
-        exit(1)
+    feed_list = db.get_feed_list_or_die(feeds)
 
     to_summarize = []
     for feedref in feed_list.feeds:

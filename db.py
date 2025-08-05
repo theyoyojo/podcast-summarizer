@@ -481,7 +481,11 @@ def insert_feed_list(feeds):
     return feed_list
 
 def get_feed_list(feeds):
-    return FeedList.select().where(FeedList.source == feeds).first()
+    feed_list = FeedList.select().where(FeedList.source == feeds).first()
+    if not feed_list:
+        print(f'fatal: no such feed list "{feeds}" found in database')
+        exit(1)
+    return feed_list
 
 def get_latest_report(after, before, feeds):
     return (Report.select()

@@ -25,12 +25,14 @@ class SimpleAPIHandler(BaseHTTPRequestHandler):
         content = []
 
         match raw_path.split('/'):
-            case ['','api', target] if (after := queries.get('after', None)) and (before := queries.get('before', None)) and (feeds := queries.get('feeds')):
+            case ['','api', 'report'] if (after := queries.get('after', None)) and (before := queries.get('before', None)) and (feeds := queries.get('feeds')):
 
                 if report := db.get_latest_report(after, before, feeds):
                     self.return_json({'text':report.text, 'after':report.after.isoformat(), 'before':report.before.isoformat(), 'timestamp_generated': report.timestamp})
                 else:
                     self.return_json('no extant generated report')
+            case ['','api','directory']:
+                self.return_json([f for f in FeedList])
             case _:
                 self.send_response(404)
                 self.end_headers()
