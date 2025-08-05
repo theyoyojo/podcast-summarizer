@@ -32,7 +32,7 @@ class SimpleAPIHandler(BaseHTTPRequestHandler):
                 else:
                     self.return_json('no extant generated report')
             case ['','api','directory']:
-                self.return_json(db.feed_directory)
+                self.return_json(db.feed_directory())
             case _:
                 self.send_response(404)
                 self.end_headers()
