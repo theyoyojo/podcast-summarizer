@@ -598,7 +598,7 @@ def add_feed_list_feed(feed_list, feed):
     return FeedListFeed.get_or_create(feed_list=feed_list, feed=feed)
 
 
-def feed_directory():
+def sources():
     return [f.source for f in FeedList.select()]
 
 

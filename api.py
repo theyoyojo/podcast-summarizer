@@ -38,8 +38,8 @@ class SimpleAPIHandler(BaseHTTPRequestHandler):
         if raw_path[-1] == '/':
             raw_path = raw_path[:-1]
         match raw_path.split('/'):
-            case ['', 'api', 'directory']:
-                return self.return_json(db.feed_directory())
+            case ['', 'api', 'sources']:
+                return self.return_json(db.sources())
             case ['', 'api', 'reports', source]:
                 after = queries.get('after', None)
                 before = queries.get('before', None)
