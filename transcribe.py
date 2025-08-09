@@ -9,10 +9,11 @@ from utility import parse_abf
 
 try:
     import mlx_whisper
-    model = mlx_whisper.load_model("base.en")
+    do_transcribe = mlx_whisper.transcribe
 except ModuleNotFoundError:
     import whisper
     model = whisper.load_model('base')
+    do_transcribe = model.transcribe
 
 
 def transcribe(after, before, feeds):
@@ -38,7 +39,7 @@ def transcribe(after, before, feeds):
     pbar = tqdm(total=len(to_transcribe), desc="Transcribing Audio")
     pbar.update(0)
     for e in to_transcribe:
-        result = model.transcribe(e.summarywork.audio_path)
+        result = do_transcribe(e.summarywork.audio_path)
         sw = e.summarywork
         sw.transcript = result['text']
         sw.save()
