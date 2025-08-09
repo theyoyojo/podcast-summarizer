@@ -173,8 +173,8 @@ class AudioSummaryWork(BaseModel):
     @property
     def reports(self):
         return (Report.select().join(Reportable).where(
-            (reportable_id == self.id) &
-            (reportable_type == 'audiosummarywork')))
+            (Report.reportables.reportable_id == self.id) &
+            (Report.reportables.reportable_type == 'audiosummarywork')))
 
 
 class ArticleSummaryWork(BaseModel):
@@ -198,8 +198,8 @@ class ArticleSummaryWork(BaseModel):
     @property
     def reports(self):
         return (Report.select().join(Reportable).where(
-            (reportable_id == self.id) &
-            (reportable_type == 'articlesummarywork')))
+            (Report.reportables.reportable_id == self.id) &
+            (Report.reportables.reportable_type == 'articlesummarywork')))
 
 
 class Reportable(BaseModel):
@@ -487,8 +487,11 @@ def insert_entry(feed, entry_data):
     return entry
 
 
-def get_entry(entry_id):
-    return Entry.get_by_id(entry_id)
+def get_entry_by_id(entry_id):
+    try:
+        return Entry.get_by_id(entry_id)
+    except Entry.DoesNotExist:
+        return None
 
 
 def insert_feed_list(feeds):
@@ -506,15 +509,86 @@ def get_feed_list_or_die(feeds):
     return feed_list
 
 
+def get_entries_in_range_by_source(after, before, source):
+    feed_list = get_feed_list_or_die(source)
+
+    result = []
+    for feedlistfeed in feed_list.feeds:
+        if (entries := feedlistfeed.feed.entries_in_range(after, before)):
+            result += entries
+
+    return result
+
+
+def get_entries_in_range_by_feed_id(after, before, feed_id):
+    if after is None:
+        after = datetime.min
+    if before is None:
+        before = datetime.max
+    result = []
+    try:
+        feed = Feed.get_by_id(feed_id)
+        if (entries := feed.entries_in_range(after, before)):
+            result += entries
+    except Feed.DoesNotExist:
+        pass
+    return result
+
+
+def get_last_updated_by_source(source):
+    feed_list = get_feed_list_or_die(source)
+    date = None
+
+    for feedlistfeed in feed_list.feeds:
+        if date is None or feedlistfeed.feed.updated_parsed < date:
+            date = feedlistfeed.feed.updated_parsed
+
+    return date.isoformat()
+
+
+def get_source(source):
+    feed_list = get_feed_list_or_die(source)
+    return feed_list.source
+
+
+def get_feeds_by_source(source):
+    feed_list = get_feed_list_or_die(source)
+
+    result = []
+    for feedlistfeed in feed_list.feeds:
+        result.append(feedlistfeed.feed)
+
+    return result
+
+
+def get_feed_by_id(feed_id):
+    try:
+        return Feed.get_by_id(feed_id)
+    except Feed.DoesNotExist:
+        return None
+    
+
 def get_latest_report(after, before, feeds):
-    return (Report.select()
-            .join(FeedList)
-            .where(
-                (Report.after == after) &
-                (Report.before == before) &
-                (FeedList.source == feeds))
-            .order_by(Report.timestamp.desc())
-            .first())
+    try:
+        return (Report.select()
+                .join(FeedList)
+                .where(
+                    (Report.after == after) &
+                    (Report.before == before) &
+                    (FeedList.source == feeds))
+                .order_by(Report.timestamp.desc())
+                .first())
+    except Report.DoesNotExist:
+        return None
+
+def get_reports_by_source(source):
+    try:
+        return (Report.select()
+                   .join(FeedList)
+                   .where(FeedList.source == source)
+                   .order_by(Report.timestamp.desc()))
+    except Report.DoesNotExist:
+        return []
 
 
 def add_feed_list_feed(feed_list, feed):
