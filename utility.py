@@ -8,7 +8,7 @@ def date_type(datestr):
         return datetime.strptime(datestr, "%Y-%m-%d")
     except ValueError:
         raise argparse.ArgumentTypeError(
-                f'Bad date argument: {datestr} (Excepted YYYY-MM-DD)')
+              f'Bad date argument: {datestr} (Excepted YYYY-MM-DD)')
 
 
 def parse_abf(prog):
@@ -36,7 +36,7 @@ def download_file(url, local_filename=None, return_data=False):
         local_filename = url.split('/')[-1]
 
     headers = {
-                'User-Agent': '''
+        'User-Agent': '''
                     Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
                     AppleWebKit/537.36 (KHTML, like Gecko) \
                     Chrome/58.0.3029.110 Safari/537.3'

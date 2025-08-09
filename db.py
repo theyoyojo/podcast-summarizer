@@ -34,8 +34,8 @@ class Report(BaseModel):
                 .join(Reportable, on=(Reportable.reportable_id == self.id))
                 .join(Report)
                 .where(
-                    (Report.id == self.id) &
-                    (Reportable.reportable_type == 'audiosummarywork')
+                    (Report.id == self.id)
+                    & (Reportable.reportable_type == 'audiosummarywork')  # NOQA: W503
                 ))
 
     @property
@@ -45,8 +45,8 @@ class Report(BaseModel):
                 .join(Reportable, on=(Reportable.reportable_id == self.id))
                 .join(Report)
                 .where(
-                    (Report.id == self.id) &
-                    (Reportable.reportable_type == 'articlesummarywork')
+                    (Report.id == self.id)
+                    & (Reportable.reportable_type == 'articlesummarywork')  # NOQA: W503
                 ))
 
     def __str__(self):
@@ -114,10 +114,12 @@ class Feed(BaseModel):
 
     # after is inclusive but before is exclusive
     def entries_in_range(self, after, before):
-        entries = self.entries.select().where(
-                (after <= Entry.published_parsed) &
-                (Entry.published_parsed < before)
-            ).execute()
+        entries = (self.entries
+                   .select()
+                   .where(
+                       (after <= Entry.published_parsed)
+                       & (Entry.published_parsed < before))  # NOQA: W503
+                   .execute())
         return entries
 
 
@@ -161,8 +163,8 @@ class AudioSummaryWork(BaseModel):
     @property
     def entry(self):
         return Entry.select().where(
-                (Entry.summarywork_id == self.id) &
-                (Entry.summarywork_type == 'audiosummarywork')).first()
+            (Entry.summarywork_id == self.id)
+            & (Entry.summarywork_type == 'audiosummarywork')).first()  # NOQA: W503
 
     def download(self):
         path = f'.cache/{self.entry.id}.mp3'
@@ -173,8 +175,8 @@ class AudioSummaryWork(BaseModel):
     @property
     def reports(self):
         return (Report.select().join(Reportable).where(
-            (Report.reportables.reportable_id == self.id) &
-            (Report.reportables.reportable_type == 'audiosummarywork')))
+            (Report.reportables.reportable_id == self.id)
+            & (Report.reportables.reportable_type == 'audiosummarywork')))  # NOQA: W503
 
 
 class ArticleSummaryWork(BaseModel):
@@ -187,8 +189,8 @@ class ArticleSummaryWork(BaseModel):
     @property
     def entry(self):
         return Entry.select().where(
-                (Entry.summarywork_id == self.id) &
-                (Entry.summarywork_type == 'articlesummarywork')).first()
+            (Entry.summarywork_id == self.id)
+            & (Entry.summarywork_type == 'articlesummarywork')).first()  # NOQA: W503
 
     def download(self):
         self.full_text = download_file(self.entry.enclosures[0].url,
@@ -198,8 +200,8 @@ class ArticleSummaryWork(BaseModel):
     @property
     def reports(self):
         return (Report.select().join(Reportable).where(
-            (Report.reportables.reportable_id == self.id) &
-            (Report.reportables.reportable_type == 'articlesummarywork')))
+            (Report.reportables.reportable_id == self.id)
+            & (Report.reportables.reportable_type == 'articlesummarywork')))  # NOQA: W503
 
 
 class Reportable(BaseModel):
@@ -566,27 +568,28 @@ def get_feed_by_id(feed_id):
         return Feed.get_by_id(feed_id)
     except Feed.DoesNotExist:
         return None
-    
+
 
 def get_latest_report(after, before, feeds):
     try:
         return (Report.select()
                 .join(FeedList)
                 .where(
-                    (Report.after == after) &
-                    (Report.before == before) &
-                    (FeedList.source == feeds))
+                    (Report.after == after)
+                    & (Report.before == before)  # NOQA: W503
+                    & (FeedList.source == feeds))  # NOQA: W503
                 .order_by(Report.timestamp.desc())
                 .first())
     except Report.DoesNotExist:
         return None
 
+
 def get_reports_by_source(source):
     try:
         return (Report.select()
-                   .join(FeedList)
-                   .where(FeedList.source == source)
-                   .order_by(Report.timestamp.desc()))
+                      .join(FeedList)
+                      .where(FeedList.source == source)
+                      .order_by(Report.timestamp.desc()))
     except Report.DoesNotExist:
         return []
 

@@ -12,11 +12,11 @@ def summarize(after, before, feeds):
     to_summarize = []
     for feedref in feed_list.feeds:
         for entry in feedref.feed.entries_in_range(after, before):
-            if ((entry.summarywork_type == 'audiosummarywork' and
-                (text := entry.summarywork.transcript))
-                    or (entry.summarywork_type == 'articlesummarywork' and
-                (text := entry.summarywork.full_text))) \
-                    and entry.summarywork.bullet_points is None:
+            if ((entry.summarywork_type == 'audiosummarywork'
+                and (text := entry.summarywork.transcript))  # NOQA: W503
+                    or (entry.summarywork_type == 'articlesummarywork'  # NOQA: W503
+                and (text := entry.summarywork.full_text))) \
+                    and entry.summarywork.bullet_points is None:  # NOQA: W503
                 to_summarize.append((entry, text))
     if len(to_summarize) == 0:
         print("Nothing to summarize.", file=sys.stderr)
