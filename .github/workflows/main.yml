@@ -12,6 +12,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+    - name: Install flake8
+      run: |
+        sudo apt update
+        sudo apt install -y flake8
+        flake8 --version
     - name: Flake8
       uses: suo/flake8-github-action@v1
       with:
