@@ -1,0 +1,3 @@
+[flake8]
+exclude = bin, lib, lib64, __cached__, *.pyc, mlx
+ignore = E501
