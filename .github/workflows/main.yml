@@ -1,0 +1,18 @@
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Flake8
+      uses: suo/flake8-github-action@v1
+      with:
+        checkName: lint
